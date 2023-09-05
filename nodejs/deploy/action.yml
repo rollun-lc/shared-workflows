@@ -1,0 +1,49 @@
+name: 'Deploy PHP service'
+description: 'Build docker container and deploy it to d2c service manager'
+inputs:
+  DOCKER_USER:
+    description: 'Docker user'
+    required: true
+  DOCKER_PASS:
+    description: 'Docker password'
+    required: true
+  D2C_USER:
+    description: 'D2C user'
+    required: true
+  D2C_PASSWORD:
+    description: 'D2C password'
+    required: true
+  SM_USER:
+    description: 'Service manager user'
+    required: true
+  SM_PASSWORD:
+    description: 'Service manager password'
+    required: true
+  SERVICE_CONFIG_PATH:
+    description: 'Path to service config'
+    required: false
+    default: './deployment/d2c-service-config.yml'
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/checkout@master
+    - name: Docker login
+      shell: bash
+      run: docker login ghcr.io -u ${{ inputs.DOCKER_USER }} -p ${{ inputs.DOCKER_PASS }}
+
+    - name: Build
+      shell: bash
+      run: docker build -t ghcr.io/$GITHUB_REPOSITORY/$(basename $PWD)/image:latest .
+
+    - name: Push
+      shell: bash
+      run: docker push ghcr.io/$GITHUB_REPOSITORY/$(basename $PWD)/image:latest
+
+    - uses: rollun-lc/actions/update-d2c-service@master
+      with:
+        config-path: ${{ inputs.SERVICE_CONFIG_PATH }}
+        d2c-email: ${{ inputs.D2C_USER }}
+        d2c-password: ${{ inputs.D2C_PASSWORD }}
+        sm-user: ${{ inputs.SM_USER }}
+        sm-password: ${{ inputs.SM_PASSWORD }}
